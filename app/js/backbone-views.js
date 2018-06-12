@@ -189,7 +189,7 @@ var ChemicalView = Backbone.View.extend({
         var variables = {
             chemicalDescription: this.model.description[0],
             chebiName: this.model.label,
-            chebiID: this.model.obo_id
+            chebiID: this.model.obo_id.substring(6, this.model.obo_id.length) //Gets only the nr from ChEBI:15422 format
         };
 
         // compile the template using underscore
@@ -920,7 +920,7 @@ var NeighborhoodQueryView = Backbone.View.extend({
         new PromptInvalidQueryView({el: '#prompt-invalidQuery-table'}).render();
         return;
       }
-      if (self.currentQueryParameters.lengthLimit > 3) {
+      if (self.currentQueryParameters.lengthLimit > 2) {
         $(self.el).modal('toggle');
         new PromptInvalidLengthLimitView({el: '#prompt-invalidLengthLimit-table'}).render();
         document.getElementById("query-neighborhood-length-limit").focus();
@@ -1674,6 +1674,10 @@ var PromptInvalidLengthLimitView = Backbone.View.extend({
         self.template = _.template($("#prompt-invalidLengthLimit-template").html());
 
         $(self.el).html(self.template);
+        if (PCdialog == "Neighborhood")
+          document.getElementById("length-limit-constant").innerHTML = "Length limit can be at most 2.";
+        else
+            document.getElementById("length-limit-constant").innerHTML = "Length limit can be at most 3.";
         $(self.el).modal('show');
 
         $(document).off("click", "#prompt-invalidLengthLimit-confirm").on("click", "#prompt-invalidLengthLimit-confirm", function (evt) {
@@ -1825,21 +1829,21 @@ var ReactionTemplateView = Backbone.View.extend({
         + i + "' value=''></input>"
         + "</td><td>";
     if( type == "reaction"){
-      html +=  "<select class='template-reaction-molecule-type sbgn-input-medium layout-text' name='reaction-template-molecule-type-" + i + "'>"
+      html +=  "<select class='template-reaction-molecule-type sbgn-output-medium layout-text' name='" + i + "' style='width: 120px'>"
              + "<option value='Macromolecule' selected> Macromolecule </option>"
              + "<option value='Simple Chemical'> Simple Chemical </option></td>";
-      html +=  "<td><img style='vertical-align: text-bottom;' class='template-reaction-delete-button' width='16px' height='16px' name='" + i + "' src='app/img/toolbar/delete-simple.svg'/></td></tr>";
+      html +=  "<td><img style='vertical-align: text-bottom;' class='template-reaction-delete-button' width='16px' height='16px' name='" + i + "' src='app/img/toolbar/delete-simple.svg'style='margin-right: 30px'/></td></tr>";
       $('#template-reaction-dissociated-table :input.template-reaction-textbox').last().closest('tr').after(html);
     }
     else if( type == "left"){
-      html +=  "<select class='template-reaction-molecule-type sbgn-input-medium layout-text' name='reversible-template-input-molecule-type" + i + "'>"
+      html +=  "<select class='template-reaction-molecule-type sbgn-output-medium layout-text' name='" + i + "' style='width: 120px'>"
              + "<option value='Macromolecule'> Macromolecule </option>"
              + "<option value='Simple Chemical' selected> Simple Chemical </option></td>";
-      html += "<td><img style='vertical-align: text-bottom;' class='template-reversible-input-delete-button' width='16px' height='16px' name='" + i + "' src='app/img/toolbar/delete-simple.svg'/></td></tr>";
+      html += "<td><img style='vertical-align: text-bottom;' class='template-reversible-input-delete-button' width='16px' height='16px' name='" + i + "' src='app/img/toolbar/delete-simple.svg' style='margin-right: 30px'/></td></tr>";
       $('#template-reversible-input-table :input.template-reaction-textbox').last().closest('tr').after(html);
     }
     else{
-      html +=  "<select class='template-reaction-molecule-type sbgn-input-medium layout-text' name='reversible-template-output-molecule-type" + i + "'>"
+      html +=  "<select class='template-reaction-molecule-type sbgn-output-medium layout-text' name='" + i + "' style='width: 120px'>"
              + "<option value='Macromolecule'> Macromolecule </option>"
              + "<option value='Simple Chemical' selected> Simple Chemical </option></td>";
       html += "<td><img style='vertical-align: text-bottom;' class='template-reversible-output-delete-button' width='16px' height='16px' name='" + i + "' src='app/img/toolbar/delete-simple.svg'/></td></tr>";
@@ -1879,7 +1883,10 @@ var ReactionTemplateView = Backbone.View.extend({
     var templateType = $('#reaction-template-type-select').val();
     var templateReactionComplexName = $('#template-reaction-complex-name').val();
     var nodeNames = $('#template-reaction-dissociated-table  :input.template-reaction-textbox').map(function(){
-        return $(this).val();
+        return {
+            name: $(this).val(),
+            id: $(this).attr('name').charAt(0)
+        };
     }).toArray();
     var nodeTypes = $('#template-reaction-dissociated-table  :input.template-reaction-molecule-type :selected').map(function(){
         return $(this).val();
@@ -1888,8 +1895,9 @@ var ReactionTemplateView = Backbone.View.extend({
     for( var i = 0; i < nodeNames.length; i++){
       nodeList.push(
         {
-          "name": nodeNames[i],
-          "type": nodeTypes[i]
+          "name": nodeNames[i].name,
+          "type": nodeTypes[i],
+          "id": nodeNames[i].id
         }
       );
     }
@@ -1968,6 +1976,7 @@ var ReactionTemplateView = Backbone.View.extend({
 
     var self = this;
     self.template = _.template($("#reaction-template-template").html());
+
 
     $(document).on('change', '#reaction-template-type-select', function (e) {
       var valueSelected = $(this).val();
@@ -2072,7 +2081,7 @@ var ReactionTemplateView = Backbone.View.extend({
     var self = this;
     self.template = _.template($("#reaction-template-template").html());
     $(self.el).html(self.template);
-    self.disableDeleteButtonStyle();
+    self.disableDeleteButtonStyle("reaction");
 
     $(self.el).modal('show');
     self.associatedHTMLContent = $('#reaction-template-left-td').html();
